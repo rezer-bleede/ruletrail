@@ -35,7 +35,8 @@ def start_run(payload: StartRunRequest, db: Session = Depends(get_db)):
     dataset = db.query(Dataset).filter(Dataset.id == payload.dataset_id).first()
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
-    es = Elasticsearch(dataset.host or settings.elasticsearch_host)
+    hosts = [dataset.host] if dataset.host else settings.elasticsearch_hosts
+    es = Elasticsearch(hosts)
     service = EvaluationService(db, es)
     run = service.run(payload.domain, payload.rulepack_id, payload.dataset_id, payload.status_labels)
     return run

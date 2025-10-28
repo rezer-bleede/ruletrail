@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from sqlalchemy import Column, DateTime, Integer, JSON, String
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class Dataset(Base):

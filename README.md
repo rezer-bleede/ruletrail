@@ -93,10 +93,14 @@ Runtime options are controlled through environment variables or `backend/.env`:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DATABASE_URL` | SQLAlchemy database URL | `sqlite:///./ruletrail.db` |
-| `ELASTICSEARCH_HOST` | Elasticsearch endpoint | `http://elasticsearch:9200` |
+| `ELASTICSEARCH_HOSTS` | Elasticsearch endpoint(s) as JSON array or comma separated list | `["http://elasticsearch:9200"]` |
+| `ELASTICSEARCH_HOST` | Legacy single host override (alias for `ELASTICSEARCH_HOSTS`) | `http://elasticsearch:9200` |
 | `SEED_EXCEL_PATH` | Path to initial rulepack | `backend/data/seed_rulepack.xlsx` |
 | `SEED_DATASET_PATH` | Path to dataset configs | `backend/data/datasets.json` |
 | `SEED_ES_PATH` | Path to seed documents | `backend/data/es_seed.json` |
+
+`ELASTICSEARCH_HOSTS` accepts either a JSON array (e.g. `"[\"http://a:9200\",\"http://b:9200\"]"`) or a comma-separated
+string (`"http://a:9200,http://b:9200"`). When unset or blank the backend automatically falls back to the default single host.
 
 Exports generated via the Results view are written to `backend/data/exports/`.
 
