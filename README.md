@@ -116,6 +116,9 @@ string (`"http://a:9200,http://b:9200"`). When unset, blank, or filled with only
 to the default single host without raising a configuration error. The legacy `ELASTICSEARCH_HOST` variable remains supported and
 is merged into `ELASTICSEARCH_HOSTS` internally.
 
+All file-based settings are resolved relative to both the repository root and the `backend/` directory so you can run
+`uvicorn app.main:app` from either location without breaking demo data seeding.
+
 Exports generated via the Results view are written to `backend/data/exports/`.
 
 ## Notable features

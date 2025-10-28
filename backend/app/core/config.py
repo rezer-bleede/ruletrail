@@ -1,5 +1,6 @@
 from functools import lru_cache
 import json
+from pathlib import Path
 from typing import List
 
 try:  # pragma: no cover - import fallback for pydantic v1
@@ -7,7 +8,7 @@ try:  # pragma: no cover - import fallback for pydantic v1
 except ImportError:  # pragma: no cover - runtime fallback when pydantic-settings is absent
     from pydantic import BaseSettings  # type: ignore[no-redef]
 
-from pydantic import Field, root_validator, validator
+from pydantic import Field, PrivateAttr, root_validator, validator
 
 
 DEFAULT_ELASTICSEARCH_HOST = "http://elasticsearch:9200"
@@ -45,6 +46,9 @@ class Settings(BaseSettings):
     seed_dataset_path: str = Field(default="backend/data/datasets.json")
     run_export_dir: str = Field(default="backend/data/exports")
     seed_es_path: str = Field(default="backend/data/es_seed.json")
+
+    _backend_dir: Path = PrivateAttr(default=Path(__file__).resolve().parents[2])
+    _project_root: Path = PrivateAttr(default=Path(__file__).resolve().parents[3])
 
     class Config:
         env_file = ".env"
@@ -92,6 +96,40 @@ class Settings(BaseSettings):
         """Return the primary Elasticsearch host for backwards compatibility."""
 
         return self.elasticsearch_hosts[0]
+
+    def resolve_path(self, value: str | Path) -> Path:
+        """Return an absolute path for configuration-provided file locations.
+
+        Relative paths are resolved against a set of candidate roots so the
+        application behaves the same whether it is started from the repository
+        root or from the ``backend`` package directory.
+        """
+
+        candidate = Path(value)
+        if candidate.is_absolute():
+            return candidate
+
+        # If the caller already provided a relative path that exists from the
+        # current working directory, prefer it directly.
+        if candidate.exists():
+            return candidate.resolve()
+
+        search_roots = []
+        cwd = Path.cwd()
+        search_roots.append(cwd)
+        if self._project_root not in search_roots:
+            search_roots.append(self._project_root)
+        if self._backend_dir not in search_roots:
+            search_roots.append(self._backend_dir)
+
+        for root in search_roots:
+            resolved = (root / candidate).resolve()
+            if resolved.exists():
+                return resolved
+
+        # Fall back to the repository root so the caller receives a stable path
+        # even when the file does not yet exist (e.g. test setups).
+        return (self._project_root / candidate).resolve()
 
 
 @lru_cache()
