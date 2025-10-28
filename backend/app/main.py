@@ -61,7 +61,7 @@ async def seed_data(db: Optional[Session] = None):
         if settings.seed_es_path and Path(settings.seed_es_path).exists():
             from elasticsearch import Elasticsearch
 
-            es = Elasticsearch(settings.elasticsearch_host)
+            es = Elasticsearch(settings.elasticsearch_hosts)
             seed_elasticsearch(es, Path(settings.seed_es_path))
     except Exception as exc:
         logger.exception("Failed to seed data: %s", exc)
