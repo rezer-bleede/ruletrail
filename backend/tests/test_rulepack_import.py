@@ -57,3 +57,29 @@ def test_load_rulepack_from_excel_preserves_metadata(db_session):
 
     rulepacks = load_rulepack_from_excel(db_session, excel_bytes, metadata=metadata)
     assert rulepacks[0].pack_metadata == metadata
+
+
+def test_load_rulepack_from_excel_allows_simple_condition_lists(db_session):
+    df = pd.DataFrame(
+        [
+            {
+                "S. No.": 1,
+                "Rule No.": "HR-002",
+                "New Rule Name": "Flag based rule",
+                "Conditions AND OR": "Condition1 and Condition2",
+                "Original Fields": "Condition1, Condition2",
+            }
+        ]
+    )
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name="HR", index=False)
+    buffer.seek(0)
+
+    rulepacks = load_rulepack_from_excel(db_session, buffer.getvalue())
+
+    assert len(rulepacks) == 1
+    rule = rulepacks[0].rules[0]
+    assert len(rule.conditions) == 2
+    assert rule.conditions[0]["operator"] == "exists"
+    assert rule.conditions[0]["connector"] == "AND"

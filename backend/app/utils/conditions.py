@@ -3,9 +3,20 @@ from __future__ import annotations
 import operator
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterable, List
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 from app.schemas.common import ConditionClause
+
+
+def _value_is_present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value.strip() != ""
+    if isinstance(value, (list, tuple, set, dict)):
+        return len(value) > 0
+    return True
+
 
 _OPERATORS: Dict[str, Callable[[Any, Any], bool]] = {
     "==": operator.eq,
@@ -16,12 +27,18 @@ _OPERATORS: Dict[str, Callable[[Any, Any], bool]] = {
     "<": operator.lt,
     "<=": operator.le,
     "contains": lambda a, b: b in a if a is not None else False,
+    "not_contains": lambda a, b: b not in a if a is not None else True,
+    "exists": lambda value, expected: _value_is_present(value) if expected else not _value_is_present(value),
 }
 
 _CONDITION_PATTERN = re.compile(
-    r"\s*(?P<field>[\w.]+)\s*(?P<operator>>=|<=|!=|==|=|>|<|contains)\s*(?P<value>.+?)\s*(?P<connector>AND|OR)?\s*$",
+    r"^\s*(?P<field>[\w.\s]+?)\s*(?P<operator>>=|<=|!=|==|=|>|<|contains)\s*(?P<value>.+?)\s*$",
     re.IGNORECASE,
 )
+
+_SIMPLE_FIELD_PATTERN = re.compile(r"^\s*(?P<field>[\w.\s\-]+?)\s*$")
+
+_CONNECTOR_PATTERN = re.compile(r"\b(AND|OR)\b", re.IGNORECASE)
 
 
 @dataclass
@@ -39,28 +56,71 @@ def parse_conditions(raw_value: str) -> List[ConditionClause]:
         return []
 
     clauses: List[ConditionClause] = []
-    segments: Iterable[str]
-    if "\n" in raw_value:
-        segments = [s for s in raw_value.splitlines() if s.strip()]
-    elif ";" in raw_value:
-        segments = [s.strip() for s in raw_value.split(";") if s.strip()]
-    else:
-        segments = [raw_value]
-
-    for segment in segments:
-        match = _CONDITION_PATTERN.match(segment)
-        if not match:
-            raise ConditionParserError(f"Unable to parse condition segment: '{segment}'")
-        field = match.group("field")
-        operator_symbol = match.group("operator").lower()
-        value_str = match.group("value").strip()
-        connector = match.group("connector")
-        if connector:
-            connector = connector.upper()
-        value = _normalize_value(value_str)
-        clause = ConditionClause(field=field, operator=operator_symbol, value=value, connector=connector)
+    for segment, connector in _split_into_segments(raw_value):
+        clause = _parse_segment(segment, connector)
         clauses.append(clause)
     return clauses
+
+
+def _split_into_segments(raw_value: str) -> Iterable[Tuple[str, Optional[str]]]:
+    normalized = re.sub(r"[\r\n;]+", " AND ", raw_value)
+    tokens = [token for token in _CONNECTOR_PATTERN.split(normalized) if token and token.strip()]
+    segments: List[Tuple[str, Optional[str]]] = []
+    for token in tokens:
+        token_stripped = token.strip()
+        if _CONNECTOR_PATTERN.fullmatch(token_stripped):
+            if segments:
+                last_segment, _ = segments[-1]
+                segments[-1] = (last_segment, token_stripped.upper())
+            continue
+        segments.append((token_stripped, None))
+    return segments
+
+
+def _parse_segment(segment: str, connector: Optional[str]) -> ConditionClause:
+    text = segment.strip()
+    if not text:
+        raise ConditionParserError("Empty condition segment")
+
+    negated = False
+    if text.upper().startswith("NOT "):
+        negated = True
+        text = text[4:].strip()
+
+    match = _CONDITION_PATTERN.match(text)
+    if match:
+        field = match.group("field").strip()
+        operator_symbol = match.group("operator").lower()
+        value_str = match.group("value").strip()
+        value = _normalize_value(value_str)
+        if negated:
+            operator_symbol, value = _negate_operator(operator_symbol, value)
+        return ConditionClause(field=field, operator=operator_symbol, value=value, connector=connector)
+
+    simple_match = _SIMPLE_FIELD_PATTERN.match(text)
+    if simple_match:
+        field = simple_match.group("field").strip()
+        if not field:
+            raise ConditionParserError("Condition field cannot be empty")
+        expected = not negated
+        return ConditionClause(field=field, operator="exists", value=expected, connector=connector)
+
+    raise ConditionParserError(f"Unable to parse condition segment: '{segment}'")
+
+
+def _negate_operator(operator_symbol: str, value: Any) -> Tuple[str, Any]:
+    mapping = {
+        "==": "!=",
+        "=": "!=",
+        "!=": "=",
+        ">": "<=",
+        ">=": "<",
+        "<": ">=",
+        "<=": ">",
+        "contains": "not_contains",
+    }
+    negated = mapping.get(operator_symbol, operator_symbol)
+    return negated, value
 
 
 def _normalize_value(value_str: str) -> Any:
