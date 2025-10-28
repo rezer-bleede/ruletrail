@@ -89,9 +89,12 @@ docker compose build
 docker compose up
 ```
 
+Elasticsearch publishes to host port `19200` (instead of the default `9200`) to avoid clashes with an existing local
+installation. The backend still reaches it internally on port `9200` via the `elasticsearch` service name.
+
 Services:
 
-- **elasticsearch** – single-node cluster with seeded demo documents.
+- **elasticsearch** – single-node cluster with seeded demo documents exposed on `http://localhost:19200` for local access.
 - **backend** – FastAPI app exposed on `http://localhost:8100`.
 - **frontend** – static React build via nginx on `http://localhost:3100`.
 
