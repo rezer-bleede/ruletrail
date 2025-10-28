@@ -1,9 +1,23 @@
 import axios from 'axios'
 
-const DEFAULT_API_BASE_URL = 'http://backend:8100/api'
+const stripTrailingSlash = (value: string) =>
+  value.endsWith('/') ? value.slice(0, -1) : value
+
+const resolveBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL
+  if (envUrl) {
+    return envUrl
+  }
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${stripTrailingSlash(window.location.origin)}/api`
+  }
+
+  return '/api'
+}
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || DEFAULT_API_BASE_URL
+  baseURL: resolveBaseUrl()
 })
 
 export default api

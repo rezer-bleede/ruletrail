@@ -68,9 +68,11 @@ npm run dev
 ```
 
 The UI is served at `http://localhost:5173`. It features navigation across Dashboard, Runs, Rules, Datasets, Start Evaluation,
-Results drill-down, and Settings. When running outside Docker, create a `.env` file (or export `VITE_API_URL`) that points to the
-backend, for example `VITE_API_URL=http://localhost:8100/api`. Inside Docker the frontend automatically targets the
-`http://backend:8100/api` hostname that is reachable on the compose network, avoiding cross-origin requests against `localhost`.
+Results drill-down, and Settings. API calls default to the browser origin (`/api`), so the Vite dev server proxies them to the
+backend on `http://localhost:8100` automatically. Override the proxy target by exporting `VITE_DEV_BACKEND_URL` before running
+`npm run dev`. For production builds you can still provide a fixed URL via `VITE_API_URL`; otherwise the deployed bundle reuses
+its current origin. The nginx image used in Docker Compose already forwards `/api` to the backend container, so no additional
+configuration is required when running the stack locally.
 
 ### Frontend tests
 
