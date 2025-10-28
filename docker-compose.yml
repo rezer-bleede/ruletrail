@@ -24,7 +24,7 @@ services:
     environment:
       - ELASTICSEARCH_HOST=http://elasticsearch:9200
     ports:
-      - '8000:8000'
+      - '8100:8100'
 
   frontend:
     build:
@@ -32,4 +32,4 @@ services:
     depends_on:
       - backend
     ports:
-      - '3000:80'
+      - '3100:80'
