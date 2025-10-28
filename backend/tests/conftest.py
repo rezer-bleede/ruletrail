@@ -101,9 +101,20 @@ def client(db_session, monkeypatch):
     yield TestClient(app)
 
 
+class FakeIndicesClient:
+    def __init__(self):
+        self.created: List[str] = []
+
+    def create(self, index: str, ignore: int | None = None):
+        if index not in self.created:
+            self.created.append(index)
+
+
 class FakeElasticsearch:
     def __init__(self, documents: List[Dict]):
-        self.documents = documents
+        self.documents = list(documents)
+        self.indices = FakeIndicesClient()
+        self.indexed: List[Dict] = []
 
     def search(self, index: str, body: Dict, size: int = 1000):
         return {
@@ -114,6 +125,13 @@ class FakeElasticsearch:
                 ]
             }
         }
+
+    def index(self, index: str, id: str | None = None, document: Dict | None = None):
+        doc = document.copy() if document else {}
+        if id is not None:
+            doc.setdefault("id", id)
+        self.documents.append(doc)
+        self.indexed.append({"index": index, "id": id, "document": doc})
 
 
 @pytest.fixture

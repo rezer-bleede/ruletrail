@@ -11,7 +11,8 @@ vi.mock('../../hooks/useRulepacks', () => ({
   fetchRules: vi.fn(),
   createRule: vi.fn(),
   updateRule: vi.fn(),
-  deleteRule: vi.fn()
+  deleteRule: vi.fn(),
+  importRulepacks: vi.fn()
 }))
 
 const mockedRulepacks: RulePackSummary[] = [
@@ -32,12 +33,21 @@ const mockedRules: Rule[] = [
 ]
 
 describe('RulesPage', () => {
+  const refreshMock = vi.fn()
+
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(ruleHooks.useRulepacks as unknown as Mock).mockReturnValue({ rulepacks: mockedRulepacks, loading: false, error: null })
+    refreshMock.mockResolvedValue(mockedRulepacks)
+    ;(ruleHooks.useRulepacks as unknown as Mock).mockReturnValue({
+      rulepacks: mockedRulepacks,
+      loading: false,
+      error: null,
+      refresh: refreshMock
+    })
     ;(ruleHooks.fetchRules as unknown as Mock).mockResolvedValue(mockedRules)
     ;(ruleHooks.createRule as unknown as Mock).mockResolvedValue(mockedRules[0])
     ;(ruleHooks.updateRule as unknown as Mock).mockResolvedValue(mockedRules[0])
+    ;(ruleHooks.importRulepacks as unknown as Mock).mockResolvedValue(mockedRulepacks)
   })
 
   it('renders rules table with data', async () => {
@@ -48,6 +58,7 @@ describe('RulesPage', () => {
     )
 
     await waitFor(() => expect(ruleHooks.fetchRules).toHaveBeenCalled())
+    refreshMock.mockClear()
     expect(await screen.findByText('Test Rule')).toBeInTheDocument()
   })
 
@@ -65,5 +76,35 @@ describe('RulesPage', () => {
 
     expect(await screen.findByText('Rule No. and New Rule Name are required')).toBeInTheDocument()
     expect(ruleHooks.createRule).not.toHaveBeenCalled()
+  })
+
+  it('imports rulepacks through excel upload', async () => {
+    const newPack: RulePackSummary = {
+      id: 2,
+      domain: 'Finance',
+      version: 3,
+      checksum: 'def',
+      uploaded_at: new Date().toISOString()
+    }
+    ;(ruleHooks.importRulepacks as unknown as Mock).mockResolvedValue([newPack])
+    refreshMock.mockResolvedValue([...mockedRulepacks, newPack])
+
+    render(
+      <BrowserRouter>
+        <RulesPage />
+      </BrowserRouter>
+    )
+
+    await waitFor(() => expect(ruleHooks.fetchRules).toHaveBeenCalled())
+
+    const input = screen.getByLabelText(/upload excel/i)
+    const file = new File(['content'], 'rulepack.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    await userEvent.upload(input, file)
+
+    await waitFor(() => expect(ruleHooks.importRulepacks).toHaveBeenCalledWith(file))
+    await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1))
+    expect(screen.getByRole('status')).toHaveTextContent('Imported 1 rulepack')
   })
 })

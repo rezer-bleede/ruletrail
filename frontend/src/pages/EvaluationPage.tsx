@@ -53,27 +53,29 @@ export default function EvaluationPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold text-presight-primary">Start Evaluation</h1>
-        <p className="text-sm text-slate-500">A guided wizard to launch a new run</p>
+        <h1 className="text-xl font-semibold text-presight-primary">Start Evaluation</h1>
+        <p className="text-xs text-slate-500">A guided wizard to launch a new run</p>
       </div>
-      <ol className="flex items-center gap-3 text-sm">
+      <ol className="flex items-center gap-3 text-xs font-medium text-slate-500">
         {steps.map((label, index) => (
           <li key={label} className={`flex items-center gap-2 ${index === step ? 'text-presight-primary' : 'text-slate-400'}`}>
-            <span className={`flex h-7 w-7 items-center justify-center rounded-full border ${index <= step ? 'border-presight-primary bg-presight-primary text-white' : 'border-slate-300'}`}>
+            <span className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs ${
+              index <= step ? 'border-presight-primary bg-presight-primary text-white' : 'border-slate-300'
+            }`}>
               {index + 1}
             </span>
             {label}
           </li>
         ))}
       </ol>
-      <div className="rounded-xl border border-slate-200 p-6">
+      <div className="rounded-lg border border-slate-200 p-5">
         {step === 0 && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-700">Choose Domain</h2>
+          <div className="space-y-3">
+            <h2 className="text-base font-semibold text-slate-700">Choose Domain</h2>
             <select
-              className="w-full rounded-lg border border-slate-200 px-3 py-2"
+              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
               value={domain}
               onChange={(event) => setDomain(event.target.value)}
             >
@@ -86,10 +88,10 @@ export default function EvaluationPage() {
           </div>
         )}
         {step === 1 && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-700">Select Rulepack</h2>
+          <div className="space-y-3">
+            <h2 className="text-base font-semibold text-slate-700">Select Rulepack</h2>
             <select
-              className="w-full rounded-lg border border-slate-200 px-3 py-2"
+              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
               value={rulepackId ?? ''}
               onChange={(event) => setRulepackId(Number(event.target.value))}
             >
@@ -104,10 +106,10 @@ export default function EvaluationPage() {
           </div>
         )}
         {step === 2 && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-700">Select Dataset</h2>
+          <div className="space-y-3">
+            <h2 className="text-base font-semibold text-slate-700">Select Dataset</h2>
             <select
-              className="w-full rounded-lg border border-slate-200 px-3 py-2"
+              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
               value={datasetId ?? ''}
               onChange={(event) => setDatasetId(Number(event.target.value))}
             >
@@ -120,18 +122,18 @@ export default function EvaluationPage() {
           </div>
         )}
         {step === 3 && (
-          <div className="space-y-4 text-sm text-slate-600">
+          <div className="space-y-3 text-sm text-slate-600">
             <p>Domain: <span className="font-semibold text-presight-primary">{domain}</span></p>
             <p>Rulepack: <span className="font-semibold text-presight-primary">{rulepackId}</span></p>
             <p>Dataset: <span className="font-semibold text-presight-primary">{datasetId}</span></p>
             {message && <p className="text-sm text-red-500">{message}</p>}
           </div>
         )}
-        <div className="mt-6 flex justify-between">
+        <div className="mt-5 flex justify-between">
           <button
             disabled={step === 0}
             onClick={() => setStep((prev) => Math.max(prev - 1, 0))}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 disabled:opacity-40"
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 disabled:opacity-40"
           >
             Back
           </button>
@@ -139,7 +141,7 @@ export default function EvaluationPage() {
             <button
               disabled={!canProceed()}
               onClick={() => setStep((prev) => prev + 1)}
-              className="rounded-lg bg-presight-primary px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-40"
+              className="rounded-md bg-presight-primary px-3 py-1.5 text-sm font-semibold text-white shadow disabled:opacity-40"
             >
               Next
             </button>
@@ -147,7 +149,7 @@ export default function EvaluationPage() {
             <button
               disabled={running}
               onClick={runEvaluation}
-              className="rounded-lg bg-presight-primary px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-40"
+              className="rounded-md bg-presight-primary px-3 py-1.5 text-sm font-semibold text-white shadow disabled:opacity-40"
             >
               {running ? 'Running…' : 'Start Run'}
             </button>
