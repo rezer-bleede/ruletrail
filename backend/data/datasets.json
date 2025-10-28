@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Sample HR Dataset",
+    "host": "http://elasticsearch:9200",
+    "index_name": "hr_records",
+    "query": {"query": {"match_all": {}}}
+  },
+  {
+    "name": "Sample Finance Dataset",
+    "host": "http://elasticsearch:9200",
+    "index_name": "finance_records",
+    "query": {"query": {"match_all": {}}}
+  }
+]
