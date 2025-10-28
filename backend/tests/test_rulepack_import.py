@@ -2,6 +2,7 @@ import io
 
 import pandas as pd
 
+from app.models.rulepack import RulePack
 from app.services.rulepack_service import load_rulepack_from_excel
 
 
@@ -35,3 +36,24 @@ def test_load_rulepack_from_excel(db_session):
     rule = rulepack.rules[0]
     assert rule.new_rule_name == "Test Rule"
     assert rule.conditions[0]["field"] == "amount"
+
+
+def test_load_rulepack_from_excel_is_idempotent(db_session):
+    excel_bytes = create_excel_bytes()
+    first_import = load_rulepack_from_excel(db_session, excel_bytes)
+    assert len(first_import) == 1
+
+    second_import = load_rulepack_from_excel(db_session, excel_bytes)
+    assert len(second_import) == 1
+    assert second_import[0].id == first_import[0].id
+
+    total_rulepacks = db_session.query(RulePack).count()
+    assert total_rulepacks == 1
+
+
+def test_load_rulepack_from_excel_preserves_metadata(db_session):
+    excel_bytes = create_excel_bytes()
+    metadata = {"source": "unit-test"}
+
+    rulepacks = load_rulepack_from_excel(db_session, excel_bytes, metadata=metadata)
+    assert rulepacks[0].pack_metadata == metadata

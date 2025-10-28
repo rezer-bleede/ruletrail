@@ -35,7 +35,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-The API is available at `http://localhost:8000/api`. Swagger docs live at `http://localhost:8000/docs`.
+The API is available at `http://localhost:8100/api`. Swagger docs live at `http://localhost:8100/docs`.
 
 ### Backend tests
 
@@ -92,8 +92,8 @@ docker compose up
 Services:
 
 - **elasticsearch** – single-node cluster with seeded demo documents.
-- **backend** – FastAPI app exposed on `http://localhost:8000`.
-- **frontend** – static React build via nginx on `http://localhost:3000`.
+- **backend** – FastAPI app exposed on `http://localhost:8100`.
+- **frontend** – static React build via nginx on `http://localhost:3100`.
 
 On startup the backend imports `seed_rulepack.xlsx`, registers datasets from `datasets.json`, and loads `es_seed.json` into
 Elasticsearch (idempotent).

@@ -83,3 +83,20 @@ def test_rule_crud_and_run(client, db_session):
     assert run_resp.status_code == 200
     run_data = run_resp.json()
     assert run_data["status_counts"]
+
+
+def test_rulepack_import_includes_filename_metadata(client):
+    excel_bytes = prepare_rulepack_bytes()
+    filename = "hr-rules.xlsx"
+
+    response = client.post(
+        "/api/rulepacks/import",
+        files={"file": (filename, excel_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+    assert response.status_code == 200
+    rulepack_id = response.json()[0]["id"]
+
+    detail_resp = client.get(f"/api/rulepacks/{rulepack_id}")
+    assert detail_resp.status_code == 200
+    payload = detail_resp.json()
+    assert payload["pack_metadata"]["filename"] == filename
