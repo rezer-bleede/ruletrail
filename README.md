@@ -47,6 +47,16 @@ pytest backend/tests
 
 This covers Excel import mapping, rule evaluation, and API CRUD/e2e paths.
 
+### Condition syntax reference
+
+Rule clauses imported from Excel now support three complementary formats:
+
+- **Explicit comparisons** such as `amount > 10` or `status == 'OPEN'`.
+- **Inline boolean chains** using `AND`/`OR` connectors on a single line (`amount > 10 AND status == 'OPEN'`).
+- **Field presence checks** where a bare field name (`Condition1 and Condition2`) is translated into an "exists" clause that validates whether the corresponding field has a non-empty value. Prefixing the field with `NOT` flips the expectation.
+
+These additions ensure legacy spreadsheets that describe conditions as bullet lists (instead of full comparisons) import successfully while keeping evaluation semantics consistent.
+
 ## Frontend quick start
 
 ```bash
