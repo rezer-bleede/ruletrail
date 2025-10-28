@@ -107,4 +107,26 @@ describe('RulesPage', () => {
     await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1))
     expect(screen.getByRole('status')).toHaveTextContent('Imported 1 rulepack')
   })
+
+  it('displays import errors returned by the backend', async () => {
+    const error = new Error('Unable to parse conditions in sheet \"HR\" row 1: amount ~~ 10')
+    ;(ruleHooks.importRulepacks as unknown as Mock).mockRejectedValue(error)
+
+    render(
+      <BrowserRouter>
+        <RulesPage />
+      </BrowserRouter>
+    )
+
+    await waitFor(() => expect(ruleHooks.fetchRules).toHaveBeenCalled())
+
+    const input = screen.getByLabelText(/upload excel/i)
+    const file = new File(['content'], 'invalid.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    await userEvent.upload(input, file)
+
+    await waitFor(() => expect(ruleHooks.importRulepacks).toHaveBeenCalledWith(file))
+    expect(await screen.findByRole('status')).toHaveTextContent('Unable to parse conditions')
+  })
 })

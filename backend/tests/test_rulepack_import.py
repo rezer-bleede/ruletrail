@@ -3,7 +3,9 @@ import io
 import pandas as pd
 
 from app.models.rulepack import RulePack
-from app.services.rulepack_service import load_rulepack_from_excel
+import pytest
+
+from app.services.rulepack_service import RulepackImportError, load_rulepack_from_excel
 
 
 def create_excel_bytes():
@@ -83,3 +85,27 @@ def test_load_rulepack_from_excel_allows_simple_condition_lists(db_session):
     assert len(rule.conditions) == 2
     assert rule.conditions[0]["operator"] == "exists"
     assert rule.conditions[0]["connector"] == "AND"
+
+
+def test_load_rulepack_from_excel_raises_on_invalid_conditions(db_session):
+    df = pd.DataFrame(
+        [
+            {
+                "S. No.": 1,
+                "Rule No.": "HR-003",
+                "New Rule Name": "Broken Rule",
+                "Conditions AND OR": "amount ~~ 10",
+            }
+        ]
+    )
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name="HR", index=False)
+    buffer.seek(0)
+
+    with pytest.raises(RulepackImportError) as excinfo:
+        load_rulepack_from_excel(db_session, buffer.getvalue())
+
+    assert "Unable to parse conditions" in str(excinfo.value)
+    assert excinfo.value.sheet == "HR"
+    assert excinfo.value.row == 1

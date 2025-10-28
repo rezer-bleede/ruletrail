@@ -51,8 +51,16 @@ export async function deleteRule(ruleId: number) {
 export async function importRulepacks(file: File) {
   const formData = new FormData()
   formData.append('file', file)
-  const response = await api.post<RulePackSummary[]>('/rulepacks/import', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
-  return response.data
+  try {
+    const response = await api.post<RulePackSummary[]>('/rulepacks/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data
+  } catch (error: any) {
+    const detail = error?.response?.data?.detail
+    if (detail) {
+      throw new Error(detail)
+    }
+    throw error
+  }
 }
