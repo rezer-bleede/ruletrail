@@ -67,6 +67,18 @@ npm run test -- --run
 
 Vitest validates rule table rendering, rule creation validation, and hook interactions.
 
+### Demo data seeding
+
+Populate Elasticsearch with the bundled demo documents directly from the CLI:
+
+```bash
+cd backend
+python -m app.scripts.populate_demo
+```
+
+The command connects to the configured Elasticsearch hosts and reports how many documents were indexed. The same seed can be
+triggered from the UI via the **Load demo data** action on the Datasets screen.
+
 ## Dockerised workflow
 
 The MVP ships with a docker compose stack that provisions Elasticsearch, seeds sample indices, and boots the backend/frontend
@@ -110,9 +122,12 @@ Exports generated via the Results view are written to `backend/data/exports/`.
 
 - Excel importer honours the provided column schema, including boolean clause parsing and rule ordering.
 - Rule management UI mirrors Excel fields with validation, search, and inline editing.
+- Excel rulepacks can be uploaded directly from the Rules screen; imports instantly refresh the available packs and surface
+  inline status feedback.
 - Evaluation engine produces per-record traces with PASS/FAIL/WARN/N/A outcomes and concise rationales.
 - Hierarchical results explorer (Domain → Rule → Records → Trace) with breadcrumbs and explainability context.
 - Dataset manager stores reusable Elasticsearch index/filter configurations.
+- Condensed side navigation and form controls keep the UI compact for faster reviews.
 - Comprehensive unit + integration coverage for importer, evaluator, and key UI flows.
 
 ## Contributing
