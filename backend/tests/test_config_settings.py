@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.config import DEFAULT_ELASTICSEARCH_HOST, Settings
+from app.core.config import DEFAULT_ELASTICSEARCH_HOST, Settings, _safe_json_loads
 
 
 @pytest.mark.parametrize(
@@ -38,3 +38,16 @@ def test_elasticsearch_host_env_fallback(monkeypatch: pytest.MonkeyPatch) -> Non
 
     assert settings.elasticsearch_hosts == ["http://solo:9200"]
     assert settings.elasticsearch_host == "http://solo:9200"
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("", ""),
+        ("   ", "   "),
+        ("[\"http://a:9200\"]", ["http://a:9200"]),
+        ("not-json", "not-json"),
+    ],
+)
+def test_safe_json_loads(raw: str, expected: object) -> None:
+    assert _safe_json_loads(raw) == expected

@@ -2,10 +2,38 @@ from functools import lru_cache
 import json
 from typing import List
 
-from pydantic import BaseSettings, Field, root_validator, validator
+try:  # pragma: no cover - import fallback for pydantic v1
+    from pydantic_settings import BaseSettings  # type: ignore[attr-defined]
+except ImportError:  # pragma: no cover - runtime fallback when pydantic-settings is absent
+    from pydantic import BaseSettings  # type: ignore[no-redef]
+
+from pydantic import Field, root_validator, validator
 
 
 DEFAULT_ELASTICSEARCH_HOST = "http://elasticsearch:9200"
+
+
+def _safe_json_loads(value: str):
+    """Gracefully decode JSON strings coming from environment variables.
+
+    Pydantic's settings sources attempt to JSON-decode environment variables for
+    complex fields. When an empty string (or otherwise invalid JSON) is provided
+    we want to defer the interpretation to our validator instead of raising a
+    ``JSONDecodeError``. Returning the original value allows the validator to
+    apply our custom parsing rules.
+    """
+
+    if not isinstance(value, str):
+        return value
+
+    stripped = value.strip()
+    if not stripped:
+        return value
+
+    try:
+        return json.loads(stripped)
+    except json.JSONDecodeError:
+        return value
 
 
 class Settings(BaseSettings):
@@ -20,6 +48,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        json_loads = staticmethod(_safe_json_loads)
         fields = {"elasticsearch_hosts": {"env": ["ELASTICSEARCH_HOSTS", "ELASTICSEARCH_HOST"]}}
 
         @classmethod
