@@ -2,7 +2,8 @@
   "extends": "./tsconfig.node.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "types": ["vitest/globals", "vite/client", "@testing-library/jest-dom"]
+    "types": ["vitest/globals", "vite/client", "@testing-library/jest-dom"],
+    "noEmit": true
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

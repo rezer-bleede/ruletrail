@@ -65,7 +65,7 @@ cd frontend
 npm run test -- --run
 ```
 
-Vitest validates rule table rendering and hook interactions.
+Vitest validates rule table rendering, rule creation validation, and hook interactions.
 
 ## Dockerised workflow
 
