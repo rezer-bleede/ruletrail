@@ -3,7 +3,6 @@ import io
 import pandas as pd
 from fastapi.testclient import TestClient
 
-from app.services.rulepack_service import load_rulepack_from_excel
 from app.services import evaluation_service
 from backend.tests.conftest import FakeElasticsearch
 
@@ -100,3 +99,34 @@ def test_rulepack_import_includes_filename_metadata(client):
     assert detail_resp.status_code == 200
     payload = detail_resp.json()
     assert payload["pack_metadata"]["filename"] == filename
+
+
+def test_rulepack_import_returns_validation_errors(client):
+    df = pd.DataFrame(
+        [
+            {
+                "S. No.": 1,
+                "Rule No.": "HR-999",
+                "New Rule Name": "Invalid",
+                "Conditions AND OR": "amount ~~ 10",
+            }
+        ]
+    )
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name="HR", index=False)
+    buffer.seek(0)
+
+    response = client.post(
+        "/api/rulepacks/import",
+        files={
+            "file": (
+                "invalid.xlsx",
+                buffer.getvalue(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Unable to parse conditions" in response.json()["detail"]

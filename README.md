@@ -35,7 +35,9 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-The API is available at `http://localhost:8100/api`. Swagger docs live at `http://localhost:8100/docs`.
+The API is available at `http://localhost:8100/api`. Swagger docs live at `http://localhost:8100/docs`. Import failures now return
+`400` responses that pinpoint the sheet and row that caused the error so the frontend can surface actionable feedback instead of
+generic CORS failures.
 
 ### Backend tests
 
@@ -66,7 +68,9 @@ npm run dev
 ```
 
 The UI is served at `http://localhost:5173`. It features navigation across Dashboard, Runs, Rules, Datasets, Start Evaluation,
-Results drill-down, and Settings.
+Results drill-down, and Settings. When running outside Docker, create a `.env` file (or export `VITE_API_URL`) that points to the
+backend, for example `VITE_API_URL=http://localhost:8100/api`. Inside Docker the frontend automatically targets the
+`http://backend:8100/api` hostname that is reachable on the compose network, avoiding cross-origin requests against `localhost`.
 
 ### Frontend tests
 

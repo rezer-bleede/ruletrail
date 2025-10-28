@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.models.rulepack import Rule, RulePack
 from app.schemas.common import ConditionClause
-from app.utils.conditions import parse_conditions
+from app.utils.conditions import ConditionParserError, parse_conditions
 
 COLUMN_MAP = {
     "Rule No.": "rule_no",
@@ -53,6 +53,14 @@ def _clean_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
     return df
 
+class RulepackImportError(Exception):
+    """Raised when an uploaded rulepack cannot be converted into database models."""
+
+    def __init__(self, message: str, *, sheet: Optional[str] = None, row: Optional[int] = None):
+        self.sheet = sheet
+        self.row = row
+        super().__init__(message)
+
 
 def load_rulepack_from_excel(db: Session, file_bytes: bytes, metadata: Optional[Dict[str, str]] = None) -> List[RulePack]:
     checksum = hashlib.sha256(file_bytes).hexdigest()
@@ -60,19 +68,31 @@ def load_rulepack_from_excel(db: Session, file_bytes: bytes, metadata: Optional[
     if existing:
         return [existing]
 
-    excel = pd.ExcelFile(BytesIO(file_bytes))
+    try:
+        excel = pd.ExcelFile(BytesIO(file_bytes))
+    except Exception as exc:  # pragma: no cover - pandas provides rich error context
+        raise RulepackImportError("Unable to read Excel document") from exc
     rulepacks: List[RulePack] = []
     for sheet_name in excel.sheet_names:
         df = excel.parse(sheet_name)
         df = _clean_columns(df)
         rules: List[Rule] = []
-        for idx, row in df.iterrows():
+        for row_number, (_, row) in enumerate(df.iterrows(), start=1):
             if row.dropna().empty:
                 continue
-            rule_data, extra_fields = _map_row_to_rule(row)
+            try:
+                rule_data, extra_fields = _map_row_to_rule(row, sheet_name, row_number)
+            except RulepackImportError:
+                raise
+            except Exception as exc:
+                raise RulepackImportError(
+                    f"Failed to import row {row_number} from sheet '{sheet_name}': {exc}",
+                    sheet=sheet_name,
+                    row=row_number,
+                ) from exc
             clauses = rule_data.pop("conditions", [])
             rule = Rule(
-                order_index=int(row.get("S. No.", idx + 1)),
+                order_index=_resolve_order_index(row, sheet_name, row_number),
                 **rule_data,
                 conditions=[clause.dict() for clause in clauses],
                 extra=extra_fields,
@@ -103,7 +123,7 @@ def load_rulepack_from_excel(db: Session, file_bytes: bytes, metadata: Optional[
     return rulepacks
 
 
-def _map_row_to_rule(row: pd.Series) -> Tuple[Dict[str, any], Dict[str, any]]:
+def _map_row_to_rule(row: pd.Series, sheet_name: str, row_number: int) -> Tuple[Dict[str, any], Dict[str, any]]:
     rule_data: Dict[str, any] = {}
     extra_fields: Dict[str, any] = {}
     for col, value in row.items():
@@ -111,7 +131,14 @@ def _map_row_to_rule(row: pd.Series) -> Tuple[Dict[str, any], Dict[str, any]]:
             continue
         normalized = COLUMN_MAP.get(col, None)
         if normalized == "conditions":
-            clauses = parse_conditions(str(value))
+            try:
+                clauses = parse_conditions(str(value))
+            except ConditionParserError as exc:
+                raise RulepackImportError(
+                    f"Unable to parse conditions in sheet '{sheet_name}' row {row_number}: {value}",
+                    sheet=sheet_name,
+                    row=row_number,
+                ) from exc
             rule_data["conditions"] = clauses
         elif normalized in {"original_fields", "aggregated_fields"}:
             if isinstance(value, str):
@@ -135,3 +162,15 @@ def _map_row_to_rule(row: pd.Series) -> Tuple[Dict[str, any], Dict[str, any]]:
 
 def re_split(value: str) -> List[str]:
     return [segment.strip() for segment in re.split(r"[,;\n]", value)]
+
+
+def _resolve_order_index(row: pd.Series, sheet_name: str, row_number: int) -> int:
+    value = row.get("S. No.", row_number)
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise RulepackImportError(
+            f"Row {row_number} in sheet '{sheet_name}' has invalid sequence value '{value}'",
+            sheet=sheet_name,
+            row=row_number,
+        ) from exc

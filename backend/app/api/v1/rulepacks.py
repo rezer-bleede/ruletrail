@@ -10,7 +10,7 @@ from app.db.session import get_db
 from app.models.rulepack import Rule, RulePack
 from app.schemas.common import Rule as RuleSchema
 from app.schemas.common import RuleCreate, RulePack as RulePackSchema, RulePackList, RuleUpdate
-from app.services.rulepack_service import load_rulepack_from_excel
+from app.services.rulepack_service import RulepackImportError, load_rulepack_from_excel
 
 router = APIRouter()
 
@@ -18,7 +18,10 @@ router = APIRouter()
 @router.post("/import", response_model=List[RulePackList])
 async def import_rulepacks(file: UploadFile = File(...), db: Session = Depends(get_db)):
     contents = await file.read()
-    rulepacks = load_rulepack_from_excel(db, contents, metadata={"filename": file.filename})
+    try:
+        rulepacks = load_rulepack_from_excel(db, contents, metadata={"filename": file.filename})
+    except RulepackImportError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return [RulePackList.from_orm(rp) for rp in rulepacks]
 
 
