@@ -49,3 +49,27 @@ def test_seed_demo_missing_file(client, monkeypatch, tmp_path):
 
     response = client.post("/api/datasets/seed-demo")
     assert response.status_code == 404
+
+
+def test_seed_demo_uses_default_path_from_backend(monkeypatch, client):
+    if hasattr(config_module.get_settings, "cache_clear"):
+        config_module.get_settings.cache_clear()
+
+    settings = config_module.Settings()
+    settings.elasticsearch_hosts = ["http://mock-es"]
+
+    import app.api.v1.datasets as datasets_module
+
+    fake_es = FakeElasticsearch([])
+
+    monkeypatch.setattr(datasets_module, "Elasticsearch", lambda hosts: fake_es)
+    monkeypatch.setattr(datasets_module, "get_settings", lambda: settings)
+
+    backend_dir = Path(__file__).resolve().parents[1]
+    monkeypatch.chdir(backend_dir)
+
+    response = client.post("/api/datasets/seed-demo")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["indexed"] == 4

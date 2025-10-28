@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -72,7 +71,9 @@ def test_connection(payload: ConnectionTestRequest):
 @router.post("/seed-demo")
 def seed_demo_data():
     settings = get_settings()
-    seed_path = Path(settings.seed_es_path)
+    if not settings.seed_es_path:
+        raise HTTPException(status_code=404, detail="Demo seed file not configured")
+    seed_path = settings.resolve_path(settings.seed_es_path)
     if not seed_path.exists():
         raise HTTPException(status_code=404, detail="Demo seed file not found")
     if Elasticsearch is None:

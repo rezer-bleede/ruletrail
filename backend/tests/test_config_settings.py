@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import pytest
 
+from pathlib import Path
+
 from app.core.config import DEFAULT_ELASTICSEARCH_HOST, Settings, _safe_json_loads
 
 
@@ -51,3 +53,17 @@ def test_elasticsearch_host_env_fallback(monkeypatch: pytest.MonkeyPatch) -> Non
 )
 def test_safe_json_loads(raw: str, expected: object) -> None:
     assert _safe_json_loads(raw) == expected
+
+
+def test_resolve_path_handles_backend_cwd(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = Settings()
+    project_root = Path(__file__).resolve().parents[2]
+    backend_dir = project_root / "backend"
+    target = project_root / "backend/data/es_seed.json"
+    assert target.exists()
+
+    monkeypatch.chdir(backend_dir)
+
+    resolved = settings.resolve_path("backend/data/es_seed.json")
+
+    assert resolved == target

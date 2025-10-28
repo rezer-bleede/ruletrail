@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI
@@ -46,23 +45,29 @@ async def seed_data(db: Optional[Session] = None):
         db = SessionLocal()
         created_session = True
     try:
-        if settings.seed_excel_path and Path(settings.seed_excel_path).exists():
-            with open(settings.seed_excel_path, "rb") as f:
-                load_rulepack_from_excel(db, f.read(), metadata={"source": "seed"})
-        if settings.seed_dataset_path and Path(settings.seed_dataset_path).exists():
-            import json
+        if settings.seed_excel_path:
+            seed_excel_path = settings.resolve_path(settings.seed_excel_path)
+            if seed_excel_path.exists():
+                with open(seed_excel_path, "rb") as f:
+                    load_rulepack_from_excel(db, f.read(), metadata={"source": "seed"})
+        if settings.seed_dataset_path:
+            dataset_seed_path = settings.resolve_path(settings.seed_dataset_path)
+            if dataset_seed_path.exists():
+                import json
 
-            data = json.loads(Path(settings.seed_dataset_path).read_text())
-            for dataset in data:
-                existing = db.query(Dataset).filter(Dataset.name == dataset["name"]).first()
-                if not existing:
-                    db.add(Dataset(**dataset))
-            db.commit()
-        if settings.seed_es_path and Path(settings.seed_es_path).exists():
-            from elasticsearch import Elasticsearch
+                data = json.loads(dataset_seed_path.read_text())
+                for dataset in data:
+                    existing = db.query(Dataset).filter(Dataset.name == dataset["name"]).first()
+                    if not existing:
+                        db.add(Dataset(**dataset))
+                db.commit()
+        if settings.seed_es_path:
+            es_seed_path = settings.resolve_path(settings.seed_es_path)
+            if es_seed_path.exists():
+                from elasticsearch import Elasticsearch
 
-            es = Elasticsearch(settings.elasticsearch_hosts)
-            seed_elasticsearch(es, Path(settings.seed_es_path))
+                es = Elasticsearch(settings.elasticsearch_hosts)
+                seed_elasticsearch(es, es_seed_path)
     except Exception as exc:
         logger.exception("Failed to seed data: %s", exc)
     finally:
