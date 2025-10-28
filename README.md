@@ -100,7 +100,9 @@ Runtime options are controlled through environment variables or `backend/.env`:
 | `SEED_ES_PATH` | Path to seed documents | `backend/data/es_seed.json` |
 
 `ELASTICSEARCH_HOSTS` accepts either a JSON array (e.g. `"[\"http://a:9200\",\"http://b:9200\"]"`) or a comma-separated
-string (`"http://a:9200,http://b:9200"`). When unset or blank the backend automatically falls back to the default single host.
+string (`"http://a:9200,http://b:9200"`). When unset, blank, or filled with only whitespace the backend automatically falls back
+to the default single host without raising a configuration error. The legacy `ELASTICSEARCH_HOST` variable remains supported and
+is merged into `ELASTICSEARCH_HOSTS` internally.
 
 Exports generated via the Results view are written to `backend/data/exports/`.
 
